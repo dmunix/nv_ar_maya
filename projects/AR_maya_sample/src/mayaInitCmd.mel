@@ -1,0 +1,3 @@
+commandPort -n ":5055";
+
+spaceLocator -n "locator1";

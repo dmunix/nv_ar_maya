@@ -27,6 +27,11 @@
 *.lib
 
 # Executables
-*.exe
+# *.exe
 *.out
 *.app
+
+build
+.vscode
+.idea
+models
