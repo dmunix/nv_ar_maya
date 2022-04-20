@@ -167,30 +167,32 @@ static int ParseMyArgs(int argc, char **argv) {
 }
 
 
-std::string getMayaXformCmd(std::vector<NvAR_Point3f>& jointPositions, std::vector<NvAR_Quaternion>& jointRotations, bool rotations=false)
+std::string getMayaXformCmd(const std::vector<NvAR_Point3f>& jointPositions, const std::vector<NvAR_Quaternion>& jointRotations, bool rotations=true)
 {
     std::string mayaCmd = "";
-
+    
+    // calibration matrix, makes the char smaller and rotated Y up
     // rotate 180 on Z and scale points down by 10
-    MTransformationMatrix skelTransform;
+    MTransformationMatrix calibrationTransform;
     MQuaternion fitRot;
     fitRot.setAxisAngle(MVector(0.0, 0.0, 1.0), M_PI);
     double scaleFactor[] = {0.1, 0.1, 0.1};
-    skelTransform.setScale(scaleFactor, MSpace::kWorld);
-    skelTransform.setRotationQuaternion(fitRot.x, fitRot.y, fitRot.z, fitRot.w);
+    calibrationTransform.setScale(scaleFactor, MSpace::kWorld);
+    calibrationTransform.setRotationQuaternion(fitRot.x, fitRot.y, fitRot.z, fitRot.w);
 
     uint jCount = 0;
     std::string jntName;
-    std::vector<std::string> keyChannels = {"tx", "ty", "tz", "rx", "ry", "rz"};
+    NvAR_Point3f keypoint;
     for ( uint i = 0; i < jointPositions.size(); ++i )
     {
         // joint positions
-        NvAR_Point3f keypoint = jointPositions[i];
-        MPoint point(keypoint.x, keypoint.y, keypoint.z);
-        point *= skelTransform.asMatrix();
+        keypoint = jointPositions[i];
+        MPoint point( keypoint.x, keypoint.y, keypoint.z);
+        point *= calibrationTransform.asMatrix();
 
         jntName = "joint" + std::to_string(jCount);
 
+        // xform -ws -t 0.0 0.0 0.0 joint0;
         mayaCmd += "xform -ws -t ";
         mayaCmd += std::to_string(point.x) + " " + std::to_string(point.y) + " " + std::to_string(point.z) + " ";
         mayaCmd += jntName;
@@ -198,11 +200,16 @@ std::string getMayaXformCmd(std::vector<NvAR_Point3f>& jointPositions, std::vect
 
         // joint rotation
         if (rotations)
-        {
+        {   
+            // when calibrating, rotate the only the root joint to the calibration matrix as all other rotations are local
             MQuaternion q(jointRotations[i].x, jointRotations[i].y, jointRotations[i].z, jointRotations[i].w);
+            if ( i == 0 ){
+              q = q.asMatrix() * calibrationTransform.asMatrix();
+            }
             MEulerRotation jRot = q.asEulerRotation();
             
-            mayaCmd += "xform -ws -ro ";
+            // xform -ro 0.0 0.0 0.0 joint0;
+            mayaCmd += "xform -ro ";
             mayaCmd += std::to_string(jRot.x * (180.0/M_PI)) + " ";
             mayaCmd += std::to_string(jRot.y * (180.0/M_PI)) + " ";
             mayaCmd += std::to_string(jRot.z * (180.0/M_PI)) + " ";
@@ -213,12 +220,13 @@ std::string getMayaXformCmd(std::vector<NvAR_Point3f>& jointPositions, std::vect
         jCount++;
     }
     
+    // printf("\n");
     // printf(mayaCmd.c_str());
     return mayaCmd;
 }
 
 
-std::string getMayaCmdFrom2DData(std::vector<NvAR_Point2f>& keypoints2D)
+std::string getMayaCmdFrom2DData(const std::vector<NvAR_Point2f>& keypoints2D)
 {
     std::string mayaCmd = "";
     uint jCount = 0;
@@ -364,12 +372,6 @@ int main(int argc, char **argv)
         return app.doAppErr(err);
     }
 
-    // printf("ReferencePoints: \n");
-    // for (auto pt : app.body_ar_engine.referencePose)
-    // {
-    //     printf("%7.1f%7.1f%7.1f\n", pt.x, pt.y, pt.z);
-    // }
-
     uint counter = 0;
     bool record = false;
     bool videoLoop = true;
@@ -398,15 +400,6 @@ int main(int argc, char **argv)
         {
             return doErr;
         }
-
-        // set detection mode
-        if (app.body_ar_engine.appMode == BodyEngine::mode::keyPointDetection){
-            doErr = app.acquireBodyBoxAndKeyPoints();
-            if (DoApp::errCancel == doErr || DoApp::errVideo == doErr) return doErr;
-        } 
-        else {
-            return DoApp::errGeneral;
-        }
         
 
         if (!app.frame.empty() && !app.writeOutFiles) 
@@ -417,9 +410,6 @@ int main(int argc, char **argv)
                 app.drawKalmanStatus(app.frame);
                 if (app.captureOutputs && app.captureVideo) app.drawVideoCaptureStatus(app.frame);
             }
-
-            // display the image
-            cv::imshow(app.windowTitle, app.frame);
         }
 
         // send to maya
@@ -441,6 +431,9 @@ int main(int argc, char **argv)
                 output_bbox, 
                 0
             );
+
+            // draw keypoints on video
+            app.DrawKeyPointsAndEdges(app.frame, keypoints2D.data(), numKeyPoints, &output_bbox);
 
             // std::string mayaCmd = getMayaCmdFrom2DData(keypoints2D);
             std::string mayaCmd = getMayaXformCmd(keypoints3D, jointAngles);
@@ -465,10 +458,13 @@ int main(int argc, char **argv)
         }
     
 
+        // display the image
+        if (!app.frame.empty() && !app.writeOutFiles)
+            cv::imshow(app.windowTitle, app.frame);
+
         // process KEYBOARD INPUT
         if (!app.writeOutFiles) 
         {   
-            // printf("fps: %d", app.cap.get(cv::CAP_PROP_FPS));
             char key = cv::waitKey(1);
             if (key >= 0) 
             {

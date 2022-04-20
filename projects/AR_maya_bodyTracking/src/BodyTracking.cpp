@@ -448,15 +448,15 @@ DoApp::Err DoApp::acquireBodyBoxAndKeyPoints() {
 #endif
 
   if (n && verbose && body_ar_engine.appMode != BodyEngine::mode::bodyDetection) {
-    printf("KeyPoints: [\n");
-    for (const auto &pt : keypoints2D) {
-      printf("%7.1f%7.1f\n", pt.x, pt.y);
-    }
-    printf("]\n");
+    // printf("KeyPoints: [\n");
+    // for (const auto &pt : keypoints2D) {
+    //   printf("%7.1f%7.1f\n", pt.x, pt.y);
+    // }
+    // printf("]\n");
 
     printf("3d KeyPoints: [\n");
     for (const auto& pt : keypoints3D) {
-        printf("%7.1f%7.1f%7.1f\n", pt.x, pt.y, pt.z);
+        printf("%7.1f%7.1f%7.1f  ", pt.x, pt.y, pt.z);
     }
     printf("]\n");
   }
