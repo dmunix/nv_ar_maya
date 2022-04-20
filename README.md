@@ -20,4 +20,19 @@ Using Nvidia AR SDK to bring body tracking data into maya.
 To run the app there are 2 bat files which configure the command, set the models_path to the model folder of your AR SDK install.
 If using the video app, set the video file on the .bat itself.
 
+# Usage
+First thing you need to have a skeleton in the scene representing the 34 Keypoint, you can use the file inside "maya/AR_SDK_skeleton.ma"
+
+Then run the command port so the app can comunicate with maya.
+```python
+port = ":5055"
+if port not in cmds.commandPort(q=1, lp=1):
+    cmds.commandPort(name=port)
+```
+
+Then you can run the app : 
+- Press "r' to start recording the performance and stream it to Maya
+- Press 'k' when recording to start baking the animation to the joints
+- Press 'f' to display info FPS
+- Press 'w' toggle the info on video
 

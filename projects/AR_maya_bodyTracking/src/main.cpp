@@ -172,9 +172,9 @@ std::string getMayaXformCmd(const std::vector<NvAR_Point3f>& jointPositions, con
     std::string mayaCmd = "";
     
     // calibration matrix, makes the char smaller and rotated Y up
-    // rotate 180 on Z and scale points down by 10
     MTransformationMatrix calibrationTransform;
     MQuaternion fitRot;
+    // rotate 180 on Z and scale points down by 10
     fitRot.setAxisAngle(MVector(0.0, 0.0, 1.0), M_PI);
     double scaleFactor[] = {0.1, 0.1, 0.1};
     calibrationTransform.setScale(scaleFactor, MSpace::kWorld);
@@ -226,7 +226,7 @@ std::string getMayaXformCmd(const std::vector<NvAR_Point3f>& jointPositions, con
 }
 
 
-std::string getMayaCmdFrom2DData(const std::vector<NvAR_Point2f>& keypoints2D)
+std::string getMayaXformCmd2D(const std::vector<NvAR_Point2f>& keypoints2D)
 {
     std::string mayaCmd = "";
     uint jCount = 0;
