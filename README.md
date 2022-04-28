@@ -34,6 +34,8 @@ Then you can run the app :
 - Press 'f' to display info FPS
 - Press 'w' toggle the info on video
 
+![image](ar_maya.gif)
+
 # Compiling the apps
 - Install CMake
 - Install Visual Studio 2019 or older
